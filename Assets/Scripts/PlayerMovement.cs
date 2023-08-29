@@ -6,10 +6,9 @@ public class PlayerMovement : MonoBehaviour
 {
     // movement parameters
     public float maxMoveSpeed;
+    private float currentMaxMoveSpeed;
     public float accelerationForce;
-    public float dashSpeed;
     public float dashForce;
-    public float dashDistance;
     
     // input parameters
     public string moveLeftKey;
@@ -21,63 +20,111 @@ public class PlayerMovement : MonoBehaviour
     private Rigidbody2D rb;
 
     // local variables
-    private Vector2 movement;
-    private Vector3 dashDest;
     private bool isDashing;
+    private float atDashSpeed;
+
+    // local vars for slowing down
+    private float slowDownTime;
+    private bool isSlowed;
+    private float slowCounter;
+    private GameManager manager;
 
     // Start is called before the first frame update
     void Start()
     {
+        currentMaxMoveSpeed = maxMoveSpeed;
         rb = GetComponent<Rigidbody2D>();
         isDashing = false;
+        manager = GameObject.FindGameObjectWithTag("Manager").GetComponent<GameManager>();
     }
 
     // Update is called once per frame
     void Update()
     {
-        /*
-         The dashing function is a little janky right now, because it relies on the force to be sufficient to reach teh
-        destination given the current drag. If it doesn't, it never ends. Looks fine though for a first pass.
-         */
-
-        movement = Vector2.zero;
-        if (isDashing)
+        if (!manager.isGameOver)
         {
+            HandleSlowed();
 
-            if (rb.velocity.magnitude < 0.5f)
+            Vector2 movement = Vector2.zero;
+            if (isDashing)
             {
-                Debug.Log("End dashing");
-                isDashing = false;
+                if (rb.velocity.magnitude <= atDashSpeed)
+                {
+                    isDashing = false;
+                }
+                return;
             }
-            return;
-        }
-        
 
-        if (Input.GetKeyDown(dashLeftKey))
+
+            if (Input.GetKeyDown(dashLeftKey))
+            {
+                isDashing = true;
+                atDashSpeed = rb.velocity.magnitude;
+                rb.velocity = Vector2.zero;
+                movement = Vector2.left * dashForce;
+                rb.AddForce(movement, ForceMode2D.Impulse);
+            }
+            else if (Input.GetKeyDown(dashRightKey))
+            {
+                isDashing = true;
+                atDashSpeed = rb.velocity.magnitude;
+                rb.velocity = Vector2.zero;
+                movement = Vector2.right * dashForce;
+                rb.AddForce(movement, ForceMode2D.Impulse);
+            }
+            else if (Input.GetKey(moveLeftKey) && rb.velocity.magnitude < currentMaxMoveSpeed)
+            {
+                movement = Vector2.left * accelerationForce;
+                rb.AddForce(movement * Time.deltaTime);
+            }
+            else if (Input.GetKey(moveRightKey) && rb.velocity.magnitude < currentMaxMoveSpeed)
+            {
+                movement = Vector2.right * accelerationForce;
+                rb.AddForce(movement * Time.deltaTime);
+            }
+        }
+        else
         {
-            isDashing=true;
             rb.velocity = Vector2.zero;
-            dashDest = transform.position + (Vector3.left * dashDistance);
-            movement = Vector2.left * dashForce;
-            rb.AddForce(movement, ForceMode2D.Impulse);
         }
-        else if (Input.GetKeyDown(dashRightKey))
+    }
+
+    private void HandleSlowed()
+    {
+        if (isSlowed)
         {
-            isDashing = true;
-            rb.velocity = Vector2.zero;
-            dashDest = transform.position + (Vector3.right * dashDistance);
-            movement = Vector2.right * dashForce;
-            rb.AddForce(movement, ForceMode2D.Impulse);
+            if (slowCounter < slowDownTime)
+            {
+                slowCounter += Time.deltaTime;
+            }
+            else
+            {
+                slowCounter = 0;
+                isSlowed = false;
+                currentMaxMoveSpeed = maxMoveSpeed;
+            }
         }
-        else if (Input.GetKey(moveLeftKey) && rb.velocity.magnitude < maxMoveSpeed)
+    }
+
+    public void SlowSpeedFor(float time, float slownessFactor)
+    {
+        if (!isSlowed)
         {
-            movement = Vector2.left * accelerationForce;
-            rb.AddForce(movement * Time.deltaTime);
+            this.slowDownTime = time;
+            currentMaxMoveSpeed = maxMoveSpeed / slownessFactor;
+            isSlowed = true;
+            slowCounter = 0;
         }
-        else if (Input.GetKey(moveRightKey) && rb.velocity.magnitude < maxMoveSpeed)
-        {
-            movement = Vector2.right * accelerationForce;
-            rb.AddForce(movement * Time.deltaTime);
-        }
+    }
+
+    public void ResetMovement()
+    {
+        Vector3 startPos = transform.position;
+        startPos.x = 0;
+        transform.position = startPos;
+
+        isSlowed = false;
+        isDashing = false;
+        rb.velocity = Vector2.zero;
     }
 }
