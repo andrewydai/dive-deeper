@@ -142,3 +142,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   spawnDensity: 3
+  isClumpable: 1
+  isFragmentable: 1
+  isCollectible: 0

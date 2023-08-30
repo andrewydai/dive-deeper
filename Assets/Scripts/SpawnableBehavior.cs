@@ -5,6 +5,9 @@ using UnityEngine;
 public class SpawnableBehavior : MonoBehaviour
 {
     public int spawnDensity;
+    public bool isClumpable;
+    public bool isFragmentable;
+    public bool isCollectible;
     // Start is called before the first frame update
     void Start()
     {
